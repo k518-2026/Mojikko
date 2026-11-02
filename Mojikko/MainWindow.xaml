@@ -1,0 +1,105 @@
+<Window x:Class="Mojikko.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Mojikko — 文字コードをそろえる" Width="1000" Height="780" MinWidth="780" MinHeight="620"
+        Background="{StaticResource Ink}" Icon="app.ico"
+        FontFamily="{StaticResource UiFont}" WindowStartupLocation="CenterScreen"
+        AllowDrop="True" DragOver="OnDragOver" Drop="OnDrop">
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="110" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="0,0,0,12">
+            <TextBlock Text="Mojikko" Style="{StaticResource H2}" />
+            <TextBlock Foreground="{StaticResource Muted}" TextWrapping="Wrap"
+                       Text="テキストや CSV の文字コード（Shift_JIS・EUC-JP・UTF-16 など）を自動で見分けて、UTF-8（BOM 付き）にそろえます。Excel で開いても文字化けしなくなります。ファイル・フォルダー・ZIP をウィンドウにドラッグ＆ドロップしてください。" />
+        </StackPanel>
+
+        <!-- 一覧 -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Border x:Name="DropZone" BorderThickness="2" CornerRadius="6" BorderBrush="{StaticResource Line}">
+                <Grid>
+                    <DataGrid x:Name="FileGrid" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="Column"
+                              CanUserAddRows="False" CanUserSortColumns="False" SelectionMode="Extended">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="ファイル" Binding="{Binding DisplayName}" Width="*" />
+                            <DataGridTextColumn Header="読み取った文字コード" Binding="{Binding EncodingName}" Width="190" />
+                            <DataGridTextColumn Header="大きさ" Binding="{Binding Size}" Width="80" />
+                            <DataGridTextColumn Header="状態" Binding="{Binding Status}" Width="230" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                    <TextBlock x:Name="EmptyHint" HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                               Foreground="{StaticResource Muted}" IsHitTestVisible="False"
+                               Text="ここにファイル・フォルダー・ZIP をドラッグ＆ドロップ&#10;（CSV・TSV・TXT など。ZIP は中のテキストを取り出します）" />
+                </Grid>
+            </Border>
+            <StackPanel Grid.Column="1" Margin="10,0,0,0" Width="170">
+                <Button Content="ファイルを追加…" Click="OnAddFiles" Margin="0,0,0,6" />
+                <Button Content="フォルダーを追加…" Click="OnAddFolder" Margin="0,0,0,12" />
+                <Button Content="▲ 上へ" Click="OnMoveUp" Margin="0,0,0,6" />
+                <Button Content="▼ 下へ" Click="OnMoveDown" Margin="0,0,0,12" />
+                <Button Content="選択を外す" Click="OnRemove" Margin="0,0,0,6" />
+                <Button Content="すべて消す" Click="OnClear" Margin="0" />
+            </StackPanel>
+        </Grid>
+
+        <!-- 設定 -->
+        <Border Grid.Row="2" Background="{StaticResource Panel}" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                CornerRadius="4" Padding="14,10" Margin="0,12,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="すること" VerticalAlignment="Center" Margin="0,0,12,0" Foreground="{StaticResource Muted}" />
+                <ComboBox Grid.Row="0" Grid.Column="1" x:Name="ModeCombo" SelectedIndex="0" HorizontalAlignment="Left" MinWidth="420"
+                          SelectionChanged="OnModeChanged">
+                    <ComboBoxItem Content="1 つずつ UTF-8（BOM 付き）に変換する（名前_BOM で保存）" />
+                    <ComboBoxItem Content="一覧の順に 1 つのファイルへ結合する（UTF-8 BOM 付き）" />
+                </ComboBox>
+
+                <TextBlock Grid.Row="1" Text="読み込み" VerticalAlignment="Center" Margin="0,8,12,0" Foreground="{StaticResource Muted}" />
+                <ComboBox Grid.Row="1" Grid.Column="1" x:Name="InputCombo" SelectedIndex="0" HorizontalAlignment="Left" MinWidth="420"
+                          Margin="0,8,0,0" SelectionChanged="OnInputChanged">
+                    <ComboBoxItem Content="文字コードを自動で見分ける（おすすめ）" />
+                    <ComboBoxItem Content="すべて UTF-8 として読む" />
+                    <ComboBoxItem Content="すべて Shift_JIS として読む" />
+                    <ComboBoxItem Content="すべて EUC-JP として読む" />
+                    <ComboBoxItem Content="すべて UTF-16 LE として読む" />
+                </ComboBox>
+
+                <WrapPanel Grid.Row="2" Grid.Column="1" x:Name="MergePanel" Margin="0,8,0,0" IsEnabled="False">
+                    <CheckBox x:Name="ChkSkipHeader" Content="2 つ目以降の 1 行目（CSV の見出し）を除く" IsChecked="True" Margin="0,0,20,0" />
+                    <CheckBox x:Name="ChkSeparator" Content="ファイルの切れ目に「--- ファイル名 ---」の行を入れる" IsChecked="False" />
+                </WrapPanel>
+            </Grid>
+        </Border>
+
+        <!-- ログ -->
+        <TextBox Grid.Row="3" x:Name="LogBox" IsReadOnly="True" TextWrapping="NoWrap" FontFamily="{StaticResource MonoFont}"
+                 FontSize="12" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
+
+        <Grid Grid.Row="4" Margin="0,12,0,0">
+            <TextBlock x:Name="StatusText" VerticalAlignment="Center" Foreground="{StaticResource Muted}" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="BtnOpen" Content="保存先を開く" Click="OnOpenOutput" IsEnabled="False" MinWidth="120" />
+                <Button x:Name="BtnRun" Content="変換する" Click="OnRun" FontWeight="Bold" MinWidth="140" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
